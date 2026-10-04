@@ -1,71 +1,75 @@
-// This file contains the actual application code, which is the entry point for the program.
-// It creates a window and adds our main component to it. So we initialize our defined MainComponent
-// class here, and then we implement the paint and resized methods to draw and lay out our content.
-// This is a C++ pattern, define a class in a header file, and then implement it in a cpp file although
-// not explicitly required, it is a common practice to separate the definition and implementation of classes in C++.
-// You may see definitions directly in the header file for example.
+// This file contains the implementation of our MainComponent class. The entry point for the program
+// and the window that holds our main component both live in main.cpp, so here we implement our
+// MainComponent class, including the paint and resized methods to draw and lay out our content.
+// This is a common C++ pattern: define a class in a header file, then implement it in a .cpp file.
+// Although it's not explicitly required, it is common practice to separate the definition and
+// implementation of classes in C++.
 #include "main_component.h"
 
-// constructor, in this case setting the window size at creation, starting
-// our timer to call the timerCallback() function every 100ms, and setting up
-// the audio device manager to allow the user to select and configure the audio device
+// Constructor, in this case setting the window size at creation, starting our timer to call the
+// timerCallback() function every 100ms, and setting up the audio device manager to allow the user
+// to select and configure the audio device.
 MainComponent::MainComponent() : audioSetupComp(deviceManager,
-                                                0,     // minimum input channels
-                                                256,   // maximum input channels
-                                                0,     // minimum output channels
-                                                256,   // maximum output channels
-                                                false, // ability to select midi inputs
-                                                false, // ability to select midi output device
-                                                false, // treat channels as stereo pairs
-                                                false) // hide advanced options
+                                                0,     // Minimum input channels
+                                                256,   // Maximum input channels
+                                                0,     // Minimum output channels
+                                                256,   // Maximum output channels
+                                                false, // Show MIDI input options
+                                                false, // Show MIDI output device selector
+                                                false, // Treat channels as stereo pairs
+                                                false) // Hide advanced options behind a button (false = show them directly)
 {
   deviceManager.addChangeListener(this);
   addAndMakeVisible(audioSetupComp);
+  addAndMakeVisible(cpuUsageText);
   setSize(500, 300);
   startTimer(100);
 }
 
-// destructor
+// Destructor.
 MainComponent::~MainComponent()
 {
   deviceManager.removeChangeListener(this);
 }
 
-// The paint method, in this case setting the background color.
-// The look and feel is a JUCE class that handles the default colors and styles for the application
-// based on the OS and theme, so we can use it to get the default background color for a resizable window
-// Note that we are creating a "resizable window", not all "windows" or applications are resizable
+// The paint method, in this case setting the background color. The look and feel is a JUCE class
+// that handles the default colors and styles for the application based on the OS and theme, so we
+// can use it to get the default background color for a resizable window. Note that we're just
+// borrowing the "resizable window" color here; the actual window is created in main.cpp.
 void MainComponent::paint(juce::Graphics &g)
 {
   g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 }
 
-// the resized method, what happens to our content when the user resizes the window?
-// We recalculate their relative positions and sizes.
+// The resized method: what happens to our content when the user resizes the window? We recalculate
+// the positions and sizes of our child components. For now, only the CPU label gets positioned; the
+// audio device selector doesn't get any bounds yet.
 void MainComponent::resized()
 {
-  // total area of the window
+  // Total area of our component (the window minus the title bar).
   auto rect = getLocalBounds();
 
-  // give it 10 pixels of padding
+  // Give it 10 pixels of padding on every side.
   rect.reduce(10, 10);
 
-  // remove 20 pixels from the top of the area
-  auto topLine(rect.removeFromTop(20));
+  // Remove a 20-pixel strip from the top of the area.
+  auto cpuTopLine(rect.removeFromTop(20));
+  auto deviceSelectorTopLine(rect.removeFromTop(40));
 
-  // set the bounds to the top of that area (defaults to all the way left as in 0,0)
-  cpuUsageText.setBounds(topLine);
+  // Set the label's bounds to that top strip (it starts at 10,10 because of the padding above).
+  cpuUsageText.setBounds(cpuTopLine);
+  audioSetupComp.setBounds(deviceSelectorTopLine);
 }
 
-// timer function, called every Xms
+// Timer function, called every 100ms (set by startTimer in the constructor).
 void MainComponent::timerCallback()
 {
   auto cpu = deviceManager.getCpuUsage() * 100;
   cpuUsageText.setText(juce::String(cpu, 6) + " %", juce::dontSendNotification);
 }
 
-// This callback is triggered when the selected audio device changes.
-// For now we log the new sample rate and buffer size.
+// This callback is triggered when the audio device setup changes (device, sample rate, buffer size,
+// etc). For now we log the new sample rate and buffer size.
 void MainComponent::changeListenerCallback(juce::ChangeBroadcaster *)
 {
   auto *device = deviceManager.getCurrentAudioDevice();
@@ -77,9 +81,10 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster *)
   }
 }
 
-// JUCE requires these methods for AudioAppComponent.
-// They are empty in a minimal starter app because we aren't processing audio yet.
-// void MainComponent::prepareToPlay(int /*samplesPerBlockExpected*/, double /*sampleRate*/)
+// JUCE requires these methods for AudioAppComponent. They are currently defined inline (empty) in
+// main_component.h because we aren't processing audio yet. These are left here, commented out, for
+// when we move the real implementations into this file. 
+// void MainComponent::prepareToPlay(int/*samplesPerBlockExpected*/, double /*sampleRate*/)
 // {
 // }
 

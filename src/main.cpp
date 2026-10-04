@@ -2,9 +2,9 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include "main_component.h"
 
-// this is all template code we don't need to change for now
-// essentially handling the application lifecycle and creating
-// a window to hold our main component
+// This is all template code we don't need to change for now.
+// It essentially handles the application lifecycle and creates
+// a window to hold our main component.
 class MyApplication : public juce::JUCEApplication
 {
 public:
