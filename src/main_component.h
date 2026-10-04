@@ -25,9 +25,9 @@ public:
 
     // JUCE requires these overrides for AudioAppComponent. They are no-ops for a minimal starter
     // app, but they're required to make the class concrete and compile successfully.
-    void prepareToPlay(int /*samplesPerBlockExpected*/, double /*sampleRate*/) override {}
-    void getNextAudioBlock(const juce::AudioSourceChannelInfo & /*bufferToFill*/) override {}
-    void releaseResources() override {}
+    void prepareToPlay(int bufferSize, double sampleRate) override;
+    void getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override;
+    void releaseResources() override;
 
     // The paint and resized methods inherited from juce::Component, overridden here to draw and lay
     // out our content.

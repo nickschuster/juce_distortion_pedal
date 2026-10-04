@@ -19,6 +19,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
                                                 false, // Treat channels as stereo pairs
                                                 false) // Hide advanced options behind a button (false = show them directly)
 {
+  setAudioChannels(2, 2);
   deviceManager.addChangeListener(this);
   addAndMakeVisible(audioSetupComp);
   addAndMakeVisible(cpuUsageText);
@@ -30,6 +31,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
 MainComponent::~MainComponent()
 {
   deviceManager.removeChangeListener(this);
+  shutdownAudio();
 }
 
 // The paint method, in this case setting the background color. The look and feel is a JUCE class
@@ -81,17 +83,46 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster *)
   }
 }
 
-// JUCE requires these methods for AudioAppComponent. They are currently defined inline (empty) in
-// main_component.h because we aren't processing audio yet. These are left here, commented out, for
-// when we move the real implementations into this file. 
-// void MainComponent::prepareToPlay(int/*samplesPerBlockExpected*/, double /*sampleRate*/)
-// {
-// }
+// The three functions below are the true "audio" functions called by JUCE to do things to our
+// audio. We setup a device selector in the constructor which will handle the input and output
+// selection for our program. Now we can choose to take some input and pass it to the output.
 
-// void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo & /*bufferToFill*/)
-// {
-// }
+// This is the start function. Whenever anything about our current audio setup changes (device
+// selection, sample rate, buffer size, etc.) JUCE will call this function first. We can use it to
+// setup any state we need to process audio e.g. a dedicated array for delay from previous buffers
+// (called a "delay line"). In this case we are not going to setup anything.
+void MainComponent::prepareToPlay(int bufferSize, double sampleRate)
+{
+  juce::Logger::writeToLog("prepareToPlay called");
+}
 
-// void MainComponent::releaseResources()
-// {
-// }
+// This is the main audio function. As we mentioned, this is the function that will be called
+// repeatedly to process audio. It will be called with a buffer of audio data to process and then
+// replace with the processed audio data.
+void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill)
+{
+  // Now we can play around a bit with our audio signal.
+  auto *buffer = bufferToFill.buffer;
+
+  // For each channel (e.g. stereo has 2 channels, left and right)
+  auto numChannels = buffer->getNumChannels();
+  for (int ch = 0; ch < numChannels; ++ch)
+  {
+    // get the samples in that channel
+    auto *samples = buffer->getWritePointer(ch, bufferToFill.startSample);
+
+    // loop through them and
+    for (int i = 0; i < bufferToFill.numSamples; ++i)
+    {
+      // process each sample (example: apply a random gain between 0.5 and 1.0 to each sample for a simple distortion effect).
+      samples[i] *= juce::Random::getSystemRandom().nextFloat() * 0.5f + 0.5f;
+    }
+  }
+}
+
+// The reverse of prepareToPlay, this function is called when the audio device is stopped or
+// changed. We can use it to free up any resources we allocated in prepareToPlay.
+void MainComponent::releaseResources()
+{
+  juce::Logger::writeToLog("releaseResources called");
+}
