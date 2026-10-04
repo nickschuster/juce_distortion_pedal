@@ -1,6 +1,10 @@
-#include <juce_gui_extra/juce_gui_extra.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
 #include "main_component.h"
 
+// this is all template code we don't need to change for now
+// essentially handling the application lifecycle and creating
+// a window to hold our main component
 class MyApplication : public juce::JUCEApplication
 {
 public:

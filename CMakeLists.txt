@@ -20,6 +20,8 @@ target_compile_definitions(SuperDistortion PRIVATE
     JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:SuperDistortion,JUCE_VERSION>")
 
 target_link_libraries(SuperDistortion
-    PRIVATE juce::juce_gui_extra
+    PRIVATE juce::juce_audio_devices
+            juce::juce_audio_utils
+            juce::juce_gui_extra
     PUBLIC  juce::juce_recommended_config_flags
             juce::juce_recommended_warning_flags)
