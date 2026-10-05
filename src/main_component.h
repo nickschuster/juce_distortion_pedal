@@ -1,3 +1,6 @@
+// This is our header file, not really the meat of our application. Skip to main_component.cpp for
+// the implementations.
+
 // #pragma is a special instruction to the compiler, in this case telling it to only include this
 // header file once per .cpp file, even if it gets included multiple times along the way (e.g.
 // through other headers). The reason to only include it once is to avoid defining the same class
