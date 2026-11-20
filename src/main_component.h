@@ -49,8 +49,14 @@ private:
     // A component to allow the user to select and configure the audio device.
     juce::AudioDeviceSelectorComponent audioSetupComp;
 
-    // A label to display the CPU usage.
+    // labels
     juce::Label cpuUsageText;
+    juce::Label latencyText;
+    juce::Label callbackTimeText;
+
+    // measurement variables
+    std::atomic<float> averageCallbackMs { 0.0f };
+    std::atomic<float> peakCallbackMs    { 0.0f };
 
     // JUCE macro to add a memory leak detector to this class and to prevent copy construction and
     // assignment.

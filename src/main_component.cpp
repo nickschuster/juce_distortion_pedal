@@ -22,7 +22,9 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
   setAudioChannels(2, 2);
   deviceManager.addChangeListener(this);
   addAndMakeVisible(audioSetupComp);
+  addAndMakeVisible(latencyText);
   addAndMakeVisible(cpuUsageText);
+  addAndMakeVisible(callbackTimeText);
   setSize(500, 300);
   startTimer(100);
 }
@@ -55,11 +57,15 @@ void MainComponent::resized()
   rect.reduce(10, 10);
 
   // Remove a 20-pixel strip from the top of the area.
+  auto latencyTopLine(rect.removeFromTop(20));
   auto cpuTopLine(rect.removeFromTop(20));
+  auto callbackTimeTopLine(rect.removeFromTop(20));
   auto deviceSelectorTopLine(rect.removeFromTop(40));
 
   // Set the label's bounds to that top strip (it starts at 10,10 because of the padding above).
+  latencyText.setBounds(latencyTopLine);
   cpuUsageText.setBounds(cpuTopLine);
+  callbackTimeText.setBounds(callbackTimeTopLine);
   audioSetupComp.setBounds(deviceSelectorTopLine);
 }
 
@@ -68,6 +74,9 @@ void MainComponent::timerCallback()
 {
   auto cpu = deviceManager.getCpuUsage() * 100;
   cpuUsageText.setText(juce::String(cpu, 6) + " %", juce::dontSendNotification);
+
+  callbackTimeText.setText(juce::String(averageCallbackMs.load(), 3) + " ms avg / " + juce::String(peakCallbackMs.load(), 3) + " ms peak",
+                           juce::dontSendNotification);
 }
 
 // This callback is triggered when the audio device setup changes (device, sample rate, buffer size,
@@ -79,7 +88,16 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster *)
   {
     auto sampleRate = device->getCurrentSampleRate();
     auto bufferSize = device->getCurrentBufferSizeSamples();
-    juce::Logger::writeToLog("Sample Rate: " + juce::String(sampleRate) + ", Buffer Size: " + juce::String(bufferSize));
+    auto inputLatency = device->getInputLatencyInSamples();
+    auto outputLatency = device->getOutputLatencyInSamples();
+
+    // Inline function for converting samples to milliseconds
+    auto toMs = [sampleRate](int samples)
+    { return (samples / sampleRate) * 1000.0; };
+
+    auto latencyLine = device->getName() + " | Sample rate: " + juce::String(sampleRate, 0) + " | Buffer: " + juce::String(bufferSize) + " (" + juce::String(toMs(bufferSize), 2) + " ms)" + " | Reported input latency: " + juce::String(toMs(inputLatency), 2) + " ms" + " | Reported output latency: " + juce::String(toMs(outputLatency), 2) + " ms" + " | Reported round trip: " + juce::String(toMs(inputLatency + outputLatency), 2) + " ms";
+    juce::Logger::writeToLog(latencyLine);
+    latencyText.setText(latencyLine, juce::dontSendNotification);
   }
 }
 
@@ -101,6 +119,8 @@ void MainComponent::prepareToPlay(int bufferSize, double sampleRate)
 // replace with the processed audio data.
 void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill)
 {
+  const auto startTicks = juce::Time::getHighResolutionTicks();
+
   // Now we can play around a bit with our audio signal.
   auto *buffer = bufferToFill.buffer;
 
@@ -118,6 +138,15 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo &buffer
       samples[i] *= juce::Random::getSystemRandom().nextFloat() * 0.5f + 0.5f;
     }
   }
+
+  const auto elapsedMs = (float)(juce::Time::highResolutionTicksToSeconds(
+                                     juce::Time::getHighResolutionTicks() - startTicks) *
+                                 1000.0);
+
+  averageCallbackMs.store(averageCallbackMs.load() * 0.95f + elapsedMs * 0.05f);
+
+  if (elapsedMs > peakCallbackMs.load())
+    peakCallbackMs.store(elapsedMs);
 }
 
 // The reverse of prepareToPlay, this function is called when the audio device is stopped or
