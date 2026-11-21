@@ -13,6 +13,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_utils/juce_audio_utils.h>
+#include <juce_dsp/juce_dsp.h>
 
 // Class representing the main content component of the application. It inherits from
 // juce::AudioAppComponent, juce::Timer and juce::ChangeListener so we can draw stuff to the screen,
@@ -54,9 +55,22 @@ private:
     juce::Label latencyText;
     juce::Label callbackTimeText;
 
+    juce::ComboBox modeBox;
+    juce::Slider gainSlider;
+    juce::Slider thresholdSlider;
+
     // measurement variables
-    std::atomic<float> averageCallbackMs { 0.0f };
-    std::atomic<float> peakCallbackMs    { 0.0f };
+    std::atomic<float> averageCallbackMs{0.0f};
+    std::atomic<float> peakCallbackMs{0.0f};
+
+    std::atomic<int> mode{5};
+    std::atomic<float> gain{10.0f};
+    std::atomic<float> threshold{0.5f};
+
+    juce::dsp::Oversampling<float> oversampling{
+        2,
+        2,
+        juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR};
 
     // JUCE macro to add a memory leak detector to this class and to prevent copy construction and
     // assignment.

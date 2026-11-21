@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(SuperDistortion VERSION 0.1.0 LANGUAGES CXX C)
+project(SuperDistortion VERSION 3.0.0 LANGUAGES CXX C)
 
 add_subdirectory(JUCE)
 
@@ -23,5 +23,6 @@ target_link_libraries(SuperDistortion
     PRIVATE juce::juce_audio_devices
             juce::juce_audio_utils
             juce::juce_gui_extra
+            juce::juce_dsp
     PUBLIC  juce::juce_recommended_config_flags
             juce::juce_recommended_warning_flags)

@@ -25,6 +25,25 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
   addAndMakeVisible(latencyText);
   addAndMakeVisible(cpuUsageText);
   addAndMakeVisible(callbackTimeText);
+
+  modeBox.addItemList({"Clean", "Hard clip", "Soft clip", "Asymmetric", "Oversampled"}, 1);
+  modeBox.setSelectedId(mode.load());
+  modeBox.onChange = [this] { mode = modeBox.getSelectedId(); };
+  addAndMakeVisible(modeBox);
+
+  gainSlider.setRange(1.0, 500.0);
+  gainSlider.setSkewFactorFromMidPoint(50.0);
+  gainSlider.setTextValueSuffix(" gain");
+  gainSlider.setValue(gain.load());
+  gainSlider.onValueChange = [this] { gain = (float)gainSlider.getValue(); };
+  addAndMakeVisible(gainSlider);
+
+  thresholdSlider.setRange(0.05, 1.0);
+  thresholdSlider.setTextValueSuffix(" threshold");
+  thresholdSlider.setValue(threshold.load());
+  thresholdSlider.onValueChange = [this] { threshold = (float)thresholdSlider.getValue(); };
+  addAndMakeVisible(thresholdSlider);
+
   setSize(500, 300);
   startTimer(100);
 }
@@ -66,6 +85,9 @@ void MainComponent::resized()
   latencyText.setBounds(latencyTopLine);
   cpuUsageText.setBounds(cpuTopLine);
   callbackTimeText.setBounds(callbackTimeTopLine);
+  modeBox.setBounds(rect.removeFromTop(25));
+  gainSlider.setBounds(rect.removeFromTop(25));
+  thresholdSlider.setBounds(rect.removeFromTop(25));
   audioSetupComp.setBounds(deviceSelectorTopLine);
 }
 
@@ -112,6 +134,7 @@ void MainComponent::changeListenerCallback(juce::ChangeBroadcaster *)
 void MainComponent::prepareToPlay(int bufferSize, double sampleRate)
 {
   juce::Logger::writeToLog("prepareToPlay called");
+  oversampling.initProcessing((size_t)bufferSize);
 }
 
 // This is the main audio function. As we mentioned, this is the function that will be called
@@ -121,23 +144,39 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo &buffer
 {
   const auto startTicks = juce::Time::getHighResolutionTicks();
 
-  // Now we can play around a bit with our audio signal.
-  auto *buffer = bufferToFill.buffer;
+  juce::dsp::AudioBlock<float> block(*bufferToFill.buffer);
+  const auto m = mode.load();
+  const auto g = gain.load();
+  const auto t = threshold.load();
 
-  // For each channel (e.g. stereo has 2 channels, left and right)
-  auto numChannels = buffer->getNumChannels();
-  for (int ch = 0; ch < numChannels; ++ch)
+  auto distort = [m, g, t](juce::dsp::AudioBlock<float> b)
   {
-    // get the samples in that channel
-    auto *samples = buffer->getWritePointer(ch, bufferToFill.startSample);
-
-    // loop through them and
-    for (int i = 0; i < bufferToFill.numSamples; ++i)
+    for (size_t ch = 0; ch < b.getNumChannels(); ++ch)
     {
-      // process each sample (example: apply a random gain between 0.5 and 1.0 to each sample for a simple distortion effect).
-      samples[i] *= juce::Random::getSystemRandom().nextFloat() * 0.5f + 0.5f;
+      auto *data = b.getChannelPointer(ch);
+      for (size_t i = 0; i < b.getNumSamples(); ++i)
+      {
+        auto x = data[i] * g;
+        if (m == 2)
+          data[i] = juce::jlimit(-t, t, x);
+        else if (m == 4)
+          data[i] = t * (x >= 0.0f ? std::tanh(x) : std::tanh(x * 0.7f));
+        else if (m != 1)
+          data[i] = t * std::tanh(x);
+      }
     }
+  };
+
+  if (m == 5)
+  {
+    // Upsample. This hands back a block 4x as long.
+    distort(oversampling.processSamplesUp(block));
+
+    // Filter and downsample back into the original buffer.
+    oversampling.processSamplesDown(block);
   }
+  else
+    distort(block);
 
   const auto elapsedMs = (float)(juce::Time::highResolutionTicksToSeconds(
                                      juce::Time::getHighResolutionTicks() - startTicks) *
