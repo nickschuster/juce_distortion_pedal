@@ -44,7 +44,7 @@ MainComponent::MainComponent() : audioSetupComp(deviceManager,
   thresholdSlider.onValueChange = [this] { threshold = (float)thresholdSlider.getValue(); };
   addAndMakeVisible(thresholdSlider);
 
-  setSize(500, 300);
+  setSize(500, 600);
   startTimer(100);
 }
 
@@ -79,7 +79,6 @@ void MainComponent::resized()
   auto latencyTopLine(rect.removeFromTop(20));
   auto cpuTopLine(rect.removeFromTop(20));
   auto callbackTimeTopLine(rect.removeFromTop(20));
-  auto deviceSelectorTopLine(rect.removeFromTop(40));
 
   // Set the label's bounds to that top strip (it starts at 10,10 because of the padding above).
   latencyText.setBounds(latencyTopLine);
@@ -88,7 +87,7 @@ void MainComponent::resized()
   modeBox.setBounds(rect.removeFromTop(25));
   gainSlider.setBounds(rect.removeFromTop(25));
   thresholdSlider.setBounds(rect.removeFromTop(25));
-  audioSetupComp.setBounds(deviceSelectorTopLine);
+  audioSetupComp.setBounds(rect);
 }
 
 // Timer function, called every 100ms (set by startTimer in the constructor).
